@@ -36,7 +36,7 @@ def test_pipeline_loads_sample_and_tracks_current_line():
     assert context.channel.column_id == 1
     assert context.channel.atomic_number == 29
     assert context.channel.wavelength == 324.75
-    assert len(diameter_manager.calculate(context.channel)) > 0
+    assert len(diameter_manager.calculate_diameter(context.channel)) > 0
 
     atom_api.TABLE_Set_CurrentColumnID(2)
     context = get_context(data_source)
@@ -45,7 +45,7 @@ def test_pipeline_loads_sample_and_tracks_current_line():
     assert context.channel.column_id == 2
     assert context.channel.atomic_number == 26
     assert context.channel.wavelength == 259.94
-    assert len(diameter_manager.calculate(context.channel)) > 0
+    assert len(diameter_manager.calculate_diameter(context.channel)) > 0
 
 
 def test_current_probe_can_be_registered_after_initial_probe_list_changes():
@@ -53,7 +53,7 @@ def test_current_probe_can_be_registered_after_initial_probe_list_changes():
     data_source = AtomDataSource(atom_api)
 
     context = get_context(data_source)
-    diameter = DiameterManager(sample_mass=1.0, bins=10).calculate(context.channel)
+    diameter = DiameterManager(sample_mass=1.0, bins=10).calculate_diameter(context.channel)
 
     assert context.n_channels == 1
     assert len(diameter) > 0
@@ -78,7 +78,7 @@ def test_diameter_calculation_uses_channel_concentration():
         concentration=np.array([5.0, 4.0]),
     )
 
-    diameter = DiameterManager(sample_mass=1.0, bins=10).calculate(channel)
+    diameter = DiameterManager(sample_mass=1.0, bins=10).calculate_diameter(channel)
 
     assert len(diameter) == 2
     assert np.all(diameter > 0)
@@ -94,7 +94,7 @@ def test_diameter_calculation_filters_non_positive_volumes():
         concentration=np.array([1.0, 0.0, -1.0]),
     )
 
-    diameter = DiameterManager(sample_mass=1.0, bins=10).calculate(channel)
+    diameter = DiameterManager(sample_mass=1.0, bins=10).calculate_diameter(channel)
 
     assert len(diameter) == 1
     assert np.all(diameter > 0)
@@ -188,7 +188,7 @@ def test_selected_parallel_measurement_is_loaded_directly():
 
     context = get_context(data_source, probe_id=parallel_id)
     meta = data_source.get_probe_meta(parallel_id)
-    diameter = DiameterManager(sample_mass=1.0, bins=10).calculate(context.channel)
+    diameter = DiameterManager(sample_mass=1.0, bins=10).calculate_diameter(context.channel)
 
     assert context.n_channels == 1
     assert meta is not None

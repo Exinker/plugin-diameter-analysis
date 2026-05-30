@@ -1,7 +1,7 @@
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Self
+from typing import Any, Self, TYPE_CHECKING
 
 import numpy as np
 
@@ -9,6 +9,8 @@ from plugin.context.utils import (
     calculate_concentration,
     find_bounds,
 )
+from spectrumlab.elements import PERIODIC_TABLE
+
 if TYPE_CHECKING:
     from plugin.managers.data_source_manager.data_sources.base_data_source import (
         AtomProbeData,
@@ -25,6 +27,15 @@ class Channel:
     counts: int
     position: np.ndarray = field(default_factory=lambda: np.array([], dtype=int))
     concentration: np.ndarray = field(default_factory=lambda: np.array([], dtype=float))
+
+    @property
+    def nickname(self) -> str:
+        element = PERIODIC_TABLE.database.loc[self.atomic_number]
+
+        return '{symbol} {wavelength:.4f}'.format(
+            symbol=element['symbol'],
+            wavelength=self.wavelength,
+        )
 
 
 @dataclass(frozen=True)

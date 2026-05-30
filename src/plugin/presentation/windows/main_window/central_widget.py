@@ -25,19 +25,20 @@ class DiameterDistributionWidget(BaseGraphWidget):
 
     def plot(
         self,
+        event_id: str,
         histogram: HistogramData,
     ) -> None:
-        counts = histogram.counts
-        edges = histogram.edges
-
         LOGGER.info(
-            'plot: %s',
-            json.dumps({
-                'kind': self._config.kind,
-                'labels': self._config.labels,
-            }),
+            'Plot histogram',
+            extra=dict(
+                event_id=event_id,
+                config=self._config.model_dump(),
+                data=histogram.to_dict(),
+            ),
         )
 
+        counts = histogram.counts
+        edges = histogram.edges
         centers = np.arange(len(counts))
 
         ax = self.canvas.axes
@@ -67,16 +68,6 @@ class DiameterDistributionWidget(BaseGraphWidget):
             xticklabels,
             rotation=0,
             ha='center',
-        )
-
-        LOGGER.info(
-            'plot: %s',
-            json.dumps({
-                'counts': counts.tolist(),
-                'edges': edges.tolist(),
-                'centers': centers.tolist(),
-                'xticklabels': list(xticklabels),
-            }),
         )
 
         ax.set_xlabel(

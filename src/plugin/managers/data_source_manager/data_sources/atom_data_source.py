@@ -11,7 +11,7 @@ from plugin.managers.data_source_manager.data_sources.base_data_source import (
     AtomProbeMeta,
     DataSourceABC,
 )
-from spectrumlab.types import Number, R
+from spectrumlab.types import Array, Number, R
 
 
 LOGGER = logging.getLogger('plugin-diameter-analysis')
@@ -25,25 +25,48 @@ class AtomDataSource(DataSourceABC):
 
     def get_probe_data(
         self,
+        event_id: str,
         probe_id: int,
         column_id: int,
     ) -> AtomProbeData | None:
 
         LOGGER.info(
-            'Loading data for probe %s', probe_id,
+            'Get probe data',
+            extra=dict(
+                event_id=event_id,
+                probe_id=probe_id,
+                column_id=column_id,
+            ),
         )
 
-        meta = self.get_probe_meta(probe_id)
+        meta = self.get_probe_meta(
+            event_id=event_id,
+            probe_id=probe_id,
+        )
         if meta is None:
             LOGGER.warning(
-                'Failed to load meta for probe %s', probe_id,
+                'Failed to load meta',
+                extra=dict(
+                    event_id=event_id,
+                    probe_id=probe_id,
+                    column_id=column_id,
+                ),
             )
             return None
 
-        kinetic = self._load_kinetic(probe_id, column_id)
+        kinetic = self._load_kinetic(
+            event_id=event_id,
+            probe_id=probe_id,
+            column_id=column_id,
+        )
         if kinetic is None:
             LOGGER.warning(
-                'Failed to load kinetic for probe %s and column %s', probe_id, column_id,
+                'Failed to load kinetic',
+                extra=dict(
+                    event_id=event_id,
+                    probe_id=probe_id,
+                    column_id=column_id,
+                ),
             )
             return None
 
@@ -53,24 +76,49 @@ class AtomDataSource(DataSourceABC):
         if line and hasattr(line, 'WL'):
             wavelength = float(line.WL)
 
-        kinetic_graph = self._load_kinetic_graph(kinetic)
+        kinetic_graph = self._load_kinetic_graph(
+            event_id=event_id,
+            kinetic=kinetic,
+        )
         if kinetic_graph is None or kinetic_graph.size == 0:
             LOGGER.warning(
-                'Failed to load kinetic graph for probe %s and column %s', probe_id, column_id,
+                'Failed to load kinetic graph',
+                extra=dict(
+                    event_id=event_id,
+                    probe_id=probe_id,
+                    column_id=column_id,
+                ),
             )
             return None
 
-        maxima = self._load_kinetic_maxima(kinetic)
+        maxima = self._load_kinetic_maxima(
+            event_id=event_id,
+            kinetic=kinetic,
+        )
 
-        column = self._load_column(column_id)
+        column = self._load_column(
+            event_id=event_id,
+            column_id=column_id,
+        )
         if column is None:
             LOGGER.warning(
-                'Failed to load column for probe %s and column %s', probe_id, column_id,
+                'Failed to load column',
+                extra=dict(
+                    event_id=event_id,
+                    probe_id=probe_id,
+                    column_id=column_id,
+                ),
             )
-        threshold = self._load_kinetic_threshold(column)
-        c0, c1 = self._load_graduation_coeff(column)
+        threshold = self._load_kinetic_threshold(
+            event_id=event_id,
+            column=column,
+        )
+        c0, c1 = self._load_graduation_coeff(
+            event_id=event_id,
+            column=column,
+        )
 
-        probe_data = AtomProbeData(
+        data = AtomProbeData(
             meta=meta,
             channels=[
                 AtomChannelData(
@@ -85,14 +133,20 @@ class AtomDataSource(DataSourceABC):
             ],
         )
         LOGGER.debug(
-            'Probe meta %s', meta.to_json(),
+            'Probe',
+            extra=dict(
+                event_id=event_id,
+                probe_id=probe_id,
+                column_id=column_id,
+                data=data.to_dict(),
+            ),
         )
-        LOGGER.debug(
-            'Probe data %s', probe_data.to_json(),
-        )
-        return probe_data
+        return data
 
-    def get_file_name(self) -> str:
+    def get_file_name(
+        self,
+        event_id: str,
+    ) -> str:
 
         try:
             filepath = self.atom_api.MAIN_GetCurrentFilePath()
@@ -100,24 +154,44 @@ class AtomDataSource(DataSourceABC):
                 return Path(str(filepath)).stem
 
         except Exception:
-            LOGGER.exception('Не удалось получить имя документа')
+            LOGGER.error(
+                'Failed to load file name',
+                exc_info=True,
+                extra=dict(
+                    event_id=event_id,
+                ),
+            )
 
         return 'Unknown'
 
-    def get_probe_id(self) -> int | None:
+    def get_probe_id(
+        self,
+        event_id: str,
+    ) -> int | None:
 
-        probe_id = self._load_probe_id()
+        probe_id = self._load_probe_id(
+            event_id=event_id,
+        )
         if probe_id is not None:
-            resolved_probe_id = self._resolve_probe_id(probe_id)
+            resolved_probe_id = self._resolve_probe_id(
+                event_id=event_id,
+                probe_id=probe_id,
+            )
             if resolved_probe_id != probe_id:
                 LOGGER.debug(
-                    'Current probe ID is parent: probe_id=%s parallel_id=%s',
-                    probe_id,
-                    resolved_probe_id,
+                    'Current probe is parent',
+                    extra=dict(
+                        event_id=event_id,
+                        probe_id=probe_id,
+                        parallel_id=resolved_probe_id,
+                    ),
                 )
             return resolved_probe_id
 
-    def get_column_id(self) -> int | None:
+    def get_column_id(
+        self,
+        event_id: str,
+    ) -> int | None:
 
         for method_name in (
             'TABLE_Get_CurrentColumnID',
@@ -138,7 +212,12 @@ class AtomDataSource(DataSourceABC):
                 value = method()
             except Exception:
                 LOGGER.debug(
-                    'Failed to get column ID using ', method_name, exc_info=True,
+                    'Failed to get column ID',
+                    exc_info=True,
+                    extra=dict(
+                        event_id=event_id,
+                        method_name=method_name,
+                    ),
                 )
                 continue
             try:
@@ -149,38 +228,75 @@ class AtomDataSource(DataSourceABC):
                 if hasattr(value, 'Value'):
                     value = value.Value
                 LOGGER.info(
-                    'Column ID loaded using %s', method_name,
+                    'Column ID is loaded',
+                    extra=dict(
+                        event_id=event_id,
+                        method_name=method_name,
+                    ),
                 )
                 return int(value)
             except (TypeError, ValueError):
                 LOGGER.warning(
-                    'Failed to transform column ID from value: %r', value,
+                    'Failed to transform column ID',
+                    extra=dict(
+                        event_id=event_id,
+                        value=value,
+                    ),
                 )
         return None
 
     def get_probe_meta(
         self,
+        event_id: str,
         probe_id: int,
     ) -> AtomProbeMeta | None:
 
-        file_name = self.get_file_name()
+        file_name = self.get_file_name(
+            event_id=event_id,
+        )
 
         try:
-            parent_id = self._get_parent_id(probe_id) or self._find_parent_id(probe_id)
+            parent_id = self._get_parent_id(
+                event_id=event_id,
+                probe_id=probe_id,
+            ) or self._find_parent_id(
+                event_id=event_id,
+                probe_id=probe_id,
+            )
 
             if parent_id is not None:
-                probe_name = self._get_name(parent_id, -1)
-                parallel_name = self._get_name(probe_id, parent_id)
-                display_name = self._build_display_name(probe_name, parallel_name)
+                probe_name = self._get_name(
+                    event_id=event_id,
+                    probe_id=parent_id,
+                    parent_id=-1,
+                )
+                parallel_name = self._get_name(
+                    event_id=event_id,
+                    probe_id=probe_id,
+                    parent_id=parent_id,
+                )
             else:
-                parent_id = probe_id
-                probe_name = self._get_name(probe_id, -1)
+                probe_name = self._get_name(
+                    event_id=event_id,
+                    probe_id=probe_id,
+                    parent_id=-1,
+                )
                 parallel_name = ''
-                display_name = self._build_display_name(probe_name, parallel_name)
+
+            display_name = self._build_display_name(
+                event_id=event_id,
+                probe_name=probe_name,
+                parallel_name=parallel_name,
+            )
 
         except Exception:
-            LOGGER.exception(
-                'Failed to load meta for probe %s', probe_id,
+            LOGGER.error(
+                'Failed to load meta',
+                exc_info=True,
+                extra=dict(
+                    event_id=event_id,
+                    probe_id=probe_id,
+                ),
             )
             return None
 
@@ -194,12 +310,19 @@ class AtomDataSource(DataSourceABC):
                 display_name=display_name,
             )
             LOGGER.debug(
-                'Probe meta: %s',
-                meta.to_json(),
+                'Probe meta',
+                extra=dict(
+                    event_id=event_id,
+                    probe_id=probe_id,
+                    meta=meta.to_dict(),
+                ),
             )
             return meta
 
-    def _load_probe_id(self) -> int | None:
+    def _load_probe_id(
+        self,
+        event_id: str,
+    ) -> int | None:
 
         for method_name in (
             'TABLE_DataItem_Get_CurrentSelectedID',
@@ -214,35 +337,63 @@ class AtomDataSource(DataSourceABC):
                 probe_id = int(method())
             except Exception:
                 LOGGER.warning(
-                    'Failed to load probe ID using %s', method_name, exc_info=True,
+                    'Failed to load probe ID',
+                    exc_info=True,
+                    extra=dict(
+                        event_id=event_id,
+                        method_name=method_name,
+                    ),
                 )
                 continue
 
             if probe_id >= 0:
                 LOGGER.debug(
-                    'Probe ID loaded using %s',
-                    method_name,
+                    'Probe ID loaded',
+                    extra=dict(
+                        event_id=event_id,
+                        method_name=method_name,
+                        probe_id=probe_id,
+                    ),
                 )
                 return probe_id
 
             LOGGER.warning(
                 'Failed to load probe ID',
+                extra=dict(
+                    event_id=event_id,
+                ),
             )
 
-    def _resolve_probe_id(self, probe_id: int) -> int:
+    def _resolve_probe_id(
+        self,
+        event_id: str,
+        probe_id: int,
+    ) -> int:
 
-        if not self._is_parent(probe_id):
+        if not self._is_parent(
+            event_id=event_id,
+            probe_id=probe_id,
+        ):
             return probe_id
 
-        parallel_id = self._resolve_parallel_id(probe_id)
+        parallel_id = self._resolve_parallel_id(
+            event_id=event_id,
+            probe_id=probe_id,
+        )
         if parallel_id is None:
             return probe_id
 
         return parallel_id
 
-    def _is_parent(self, probe_id: int) -> bool:
+    def _is_parent(
+        self,
+        event_id: str,
+        probe_id: int,
+    ) -> bool:
 
-        collection = self._get_collection()
+        collection = self._get_collection(
+            event_id=event_id,
+        )
 
         for i in range(int(collection.Count)):
             try:
@@ -252,18 +403,33 @@ class AtomDataSource(DataSourceABC):
                         return True
             except Exception:
                 LOGGER.debug(
-                    "Failed to load probe %s", i, exc_info=True,
+                    'Failed to load probe',
+                    exc_info=True,
+                    extra=dict(
+                        event_id=event_id,
+                        probe_id=i,
+                    ),
                 )
 
         return False
 
-    def _resolve_parallel_id(self, parent_id: int) -> int | None:
+    def _resolve_parallel_id(
+        self,
+        event_id: str,
+        probe_id: int,
+    ) -> int | None:
 
         try:
-            parallels = self.atom_api.DATAITEM_GetParallelsOfProbeID(int(parent_id))
+            parallels = self.atom_api.DATAITEM_GetParallelsOfProbeID(int(probe_id))
         except Exception:
             LOGGER.debug(
-                'Failed to get parallels using DATAITEM_GetParallelsOfProbeID for probe %s', parent_id, exc_info=True,
+                'Failed to get parallels',
+                exc_info=True,
+                extra=dict(
+                    event_id=event_id,
+                    probe_id=probe_id,
+                    method_name='DATAITEM_GetParallelsOfProbeID',
+                ),
             )
             return None
 
@@ -276,18 +442,31 @@ class AtomDataSource(DataSourceABC):
                 return int(parallel.ID)
         except Exception:
             LOGGER.debug(
-                'Failed to load first parallel for probe %s', parent_id, exc_info=True,
+                'Failed to load first parallel',
+                exc_info=True,
+                extra=dict(
+                    event_id=event_id,
+                    probe_id=probe_id,
+                ),
             )
 
         return None
 
-    def _get_collection(self):  # TODO: add types
+    def _get_collection(
+        self,
+        event_id: str,
+    ) -> Any:  # TODO: add types
 
         try:
             collection = self.atom_api.DATAITEM_Get_ProbeCollection()
         except Exception:
             LOGGER.debug(
-                'Failed to load collection using DATAITEM_Get_ProbeCollection', exc_info=True,
+                'Failed to load collection',
+                exc_info=True,
+                extra=dict(
+                    event_id=event_id,
+                    method_name='DATAITEM_Get_ProbeCollection',
+                ),
             )
             return []
 
@@ -296,21 +475,36 @@ class AtomDataSource(DataSourceABC):
 
         return collection
 
-    def _get_parent_id(self, __probe_id: int) -> int | None:
+    def _get_parent_id(
+        self,
+        event_id: str,
+        probe_id: int,
+    ) -> int | None:
 
         try:
-            parent_id = int(self.atom_api.DATAITEM_Get_ParentIDFromOwnID(__probe_id))
+            parent_id = int(self.atom_api.DATAITEM_Get_ParentIDFromOwnID(probe_id))
         except Exception:
             LOGGER.error(
-                'Failed to get parent using DATAITEM_Get_ParentIDFromOwnID',
+                'Failed to get parent',
+                exc_info=True,
+                extra=dict(
+                    event_id=event_id,
+                    method_name='DATAITEM_Get_ParentIDFromOwnID',
+                ),
             )
             return None
         else:
             return parent_id
 
-    def _find_parent_id(self, __probe_id: int) -> int | None:
+    def _find_parent_id(
+        self,
+        event_id: str,
+        probe_id: int,
+    ) -> int | None:
 
-        collection = self._get_collection()
+        collection = self._get_collection(
+            event_id=event_id,
+        )
 
         for i in range(int(collection.Count)):
             try:
@@ -325,61 +519,101 @@ class AtomDataSource(DataSourceABC):
 
                 for j in range(int(parallels.Count)):
                     parallel = parallels[j]
-                    if parallel is not None and hasattr(parallel, 'ID') and int(parallel.ID) == int(__probe_id):
+                    if parallel is not None and hasattr(parallel, 'ID') and int(parallel.ID) == int(probe_id):
                         return parent_id
             except Exception:
                 LOGGER.debug(
-                    'Failed to check parallels for probe %s', i, exc_info=True,
+                    'Failed to check parallels',
+                    exc_info=True,
+                    extra=dict(
+                        event_id=event_id,
+                        probe_id=probe_id,
+                    ),
                 )
         return None
 
-    def _get_name(self, probe_id: int, parent_id: int = -1) -> str:
+    def _get_name(
+        self,
+        event_id: str,
+        probe_id: int,
+        parent_id: int = -1,
+    ) -> str:
 
         try:
             probe_name = str(self.atom_api.TABLE_DataItem_Get_Name(probe_id, parent_id))
         except Exception:
             LOGGER.error(
-                'Failed to get name using TABLE_DataItem_Get_Name',
+                'Failed to get name',
+                exc_info=True,
+                extra=dict(
+                    event_id=event_id,
+                    method_name='TABLE_DataItem_Get_Name',
+                ),
             )
             return str(probe_id)
 
         else:
             return probe_name
 
-    def _build_display_name(self, probe_name: str, parallel_name: str) -> str:
+    def _build_display_name(
+        self,
+        event_id: str,
+        probe_name: str,
+        parallel_name: str,
+    ) -> str:
 
         if parallel_name:
             return f"{probe_name} {parallel_name}"
         return probe_name
 
-    def _load_kinetic_threshold(self, column: Any) -> R:
+    def _load_kinetic_threshold(
+        self,
+        event_id: str,
+        column: Any,
+    ) -> R:
         default = 0.0
 
         try:
             kinetic_settings = getattr(column, 'KineticSettings', None)
             if kinetic_settings is None:
                 LOGGER.debug(
-                    'Failed to load IntensityBound', exc_info=True,
+                    'Failed to load IntensityBound',
+                    exc_info=True,
+                    extra=dict(
+                        event_id=event_id,
+                    ),
                 )
                 return default
 
             threshold = getattr(kinetic_settings, 'IntensityBound', None)
             if threshold is None:
                 LOGGER.debug(
-                    'Failed to load IntensityBound', exc_info=True,
+                    'Failed to load IntensityBound',
+                    exc_info=True,
+                    extra=dict(
+                        event_id=event_id,
+                    ),
                 )
                 return default
 
         except Exception:
             LOGGER.debug(
-                'Failed to load threshold', exc_info=True,
+                'Failed to load threshold',
+                exc_info=True,
+                extra=dict(
+                    event_id=event_id,
+                ),
             )
             return default
 
         else:
             return float(threshold)
 
-    def set_current_probe_id(self, probe_id: int) -> None:
+    def set_current_probe_id(
+        self,
+        event_id: str,
+        probe_id: int,
+    ) -> None:
 
         method = getattr(self.atom_api, 'TABLE_Set_CurrentProbeID', None)
         if method is None:
@@ -388,14 +622,28 @@ class AtomDataSource(DataSourceABC):
         try:
             method(probe_id)
             LOGGER.debug(
-                'Set current probe using TABLE_Set_CurrentProbeID: %s', probe_id,
+                'Set current probe',
+                extra=dict(
+                    event_id=event_id,
+                    probe_id=probe_id,
+                    method_name='TABLE_Set_CurrentProbeID',
+                ),
             )
         except Exception:
             LOGGER.debug(
-                'Failed to set current probe using TABLE_Set_CurrentProbeID for probe %s', probe_id, exc_info=True,
+                'Failed to set current probe',
+                exc_info=True,
+                extra=dict(
+                    event_id=event_id,
+                    probe_id=probe_id,
+                    method_name='TABLE_Set_CurrentProbeID',
+                ),
             )
 
-    def _load_column_map(self) -> Mapping[str, Any]:
+    def _load_column_map(
+        self,
+        event_id: str,
+    ) -> Mapping[str, Any]:
 
         try:
             columns = self.atom_api.COLUMN_Get_Columns_OfCurrentBookmark()
@@ -420,23 +668,34 @@ class AtomDataSource(DataSourceABC):
 
     def _load_column(
         self,
+        event_id: str,
         column_id: int,
     ) -> Any | None:
 
         LOGGER.debug(
             'Load column map',
         )
-        column_map = self._load_column_map()
+        column_map = self._load_column_map(
+            event_id=event_id,
+        )
 
         if column_id in column_map:
             return column_map[column_id]
 
         LOGGER.warning(
-            'Failed column for column ID %s', column_id,
+            'Failed to load column',
+            extra=dict(
+                event_id=event_id,
+                column_id=column_id,
+            ),
         )
         return None
 
-    def _load_kinetic_graph(self, kinetic: Any) -> np.ndarray:  # TODO: add types
+    def _load_kinetic_graph(
+        self,
+        event_id: str,
+        kinetic: Any,
+    ) -> Array[R]:  # TODO: add types
 
         try:
             data = list(kinetic.GetGraph())
@@ -444,13 +703,21 @@ class AtomDataSource(DataSourceABC):
         except Exception:
             return None
 
-    def _load_kinetic_maxima(self, kinetic: Any) -> tuple[Number, ...]:
+    def _load_kinetic_maxima(
+        self,
+        event_id: str,
+        kinetic: Any,
+    ) -> tuple[Number, ...]:
 
         container = kinetic.GetGraphPeaks()
         n_peaks = int(getattr(container, 'Count', 0))
 
         LOGGER.debug(
-            'Found %d peaks', n_peaks,
+            'Found peaks',
+            extra=dict(
+                event_id=event_id,
+                n_peaks=n_peaks,
+            ),
         )
 
         try:
@@ -460,7 +727,11 @@ class AtomDataSource(DataSourceABC):
 
         except Exception:
             LOGGER.debug(
-                'Failed to load kinetic peaks', exc_info=True,
+                'Failed to load kinetic peaks',
+                exc_info=True,
+                extra=dict(
+                    event_id=event_id,
+                ),
             )
             return None
 
@@ -469,6 +740,7 @@ class AtomDataSource(DataSourceABC):
 
     def _load_graduation_coeff(
         self,
+        event_id: str,
         column: Any,
     ) -> tuple[float, float]:
         default = tuple([0.0, 1.0])
@@ -487,11 +759,19 @@ class AtomDataSource(DataSourceABC):
 
         except Exception:
             LOGGER.debug(
-                'Failed to load graduation coeff', exc_info=True,
+                'Failed to load graduation coeff',
+                exc_info=True,
+                extra=dict(
+                    event_id=event_id,
+                ),
             )
             return default
 
-    def _load_spectrum(self, probe_id: int) -> Any | None:
+    def _load_spectrum(
+        self,
+        event_id: str,
+        probe_id: int,
+    ) -> Any | None:
 
         for method_name, args in (
             ('SPE_Get_FromTable', (probe_id,)),
@@ -506,7 +786,12 @@ class AtomDataSource(DataSourceABC):
                 spectrum = method(*args)
             except Exception:
                 LOGGER.debug(
-                    'Failed to load spectrum using %s', method_name, exc_info=True,
+                    'Failed to load spectrum',
+                    exc_info=True,
+                    extra=dict(
+                        event_id=event_id,
+                        method_name=method_name,
+                    ),
                 )
                 continue
 
@@ -517,6 +802,7 @@ class AtomDataSource(DataSourceABC):
 
     def _load_kinetic(
         self,
+        event_id: str,
         probe_id: int,
         column_id: int,
     ) -> Any:  # TODO: add types
@@ -528,21 +814,38 @@ class AtomDataSource(DataSourceABC):
 
                 if line_id == column_id:
                     LOGGER.debug(
-                        'Kinetic is found successfully for probe %s and column %s', probe_id, column_id,
+                        'Kinetic is found successfully',
+                        extra=dict(
+                            event_id=event_id,
+                            probe_id=probe_id,
+                            column_id=column_id,
+                        ),
                     )
                     return kinetic
                 return None
 
         except Exception:
             LOGGER.warning(
-                'Failed to load kinetic using SPE_Get_CurrentKinetic', exc_info=True,
+                'Failed to load kinetic using SPE_Get_CurrentKinetic',
+                exc_info=True,
+                extra=dict(
+                    event_id=event_id,
+                    method_name='SPE_Get_CurrentKinetic',
+                ),
             )
             return None
 
-        spectrum = self._load_spectrum(probe_id)
+        spectrum = self._load_spectrum(
+            event_id=event_id,
+            probe_id=probe_id,
+        )
         if spectrum is None:
             LOGGER.error(
-                'Failed to load spectrum for probe %s', probe_id,
+                'Failed to load spectrum',
+                extra=dict(
+                    event_id=event_id,
+                    probe_id=probe_id,
+                ),
             )
             return None
 
@@ -551,7 +854,11 @@ class AtomDataSource(DataSourceABC):
 
         except Exception:
             LOGGER.error(
-                'Failed to load number of kinetics for probe %s', probe_id,
+                'Failed to load number of kinetics',
+                extra=dict(
+                    event_id=event_id,
+                    probe_id=probe_id,
+                ),
             )
             return None
 
@@ -567,5 +874,10 @@ class AtomDataSource(DataSourceABC):
 
             except Exception:
                 LOGGER.warning(
-                    'Failed to load kinetic', exc_info=True,
+                    'Failed to load kinetic',
+                    exc_info=True,
+                    extra=dict(
+                        event_id=event_id,
+                        probe_id=probe_id,
+                    ),
                 )

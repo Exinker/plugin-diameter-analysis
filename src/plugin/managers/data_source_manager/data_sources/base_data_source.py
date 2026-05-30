@@ -67,28 +67,47 @@ class AtomProbeData:
 class DataSourceABC(ABC):
 
     @abstractmethod
-    def get_file_name(self) -> str:
+    def get_file_name(
+        self,
+        event_id: str,
+    ) -> str:
         pass
 
     @abstractmethod
-    def get_probe_id(self) -> int:
+    def get_probe_id(
+        self,
+        event_id: str,
+    ) -> int:
         pass
 
     @abstractmethod
-    def set_current_probe_id(self, probe_id: int) -> None:
+    def set_current_probe_id(
+        self,
+        event_id: str,
+        probe_id: int,
+    ) -> None:
+        pass
+
+    @abstractmethod
+    def get_probe_meta(
+        self,
+        event_id: str,
+        probe_id: int,
+    ) -> AtomProbeMeta | None:
         pass
 
     @abstractmethod
     def get_probe_data(
         self,
+        event_id: str,
         probe_id: int,
         column_id: int,
     ) -> AtomProbeData | None:
         pass
 
     @abstractmethod
-    def get_probe_meta(self, __probe_id: int) -> AtomProbeMeta | None:
+    def get_column_id(
+        self,
+        event_id: str,
+    ) -> int | None:
         pass
-
-    def get_column_id(self) -> int | None:
-        return None

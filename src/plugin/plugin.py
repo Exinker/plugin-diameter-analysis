@@ -1,5 +1,6 @@
 import logging
 import sys
+import time
 
 from PySide6 import QtWidgets
 
@@ -31,8 +32,14 @@ class Plugin:
 
         self.window = MainWindow(state_manager=self.state_manager)
         self.window.show()
+
+        event_id = ''
         self.window.refresh(
-            histogram=self.state_manager.build_histogram(force=True),
+            event_id=event_id,
+            histogram=self.state_manager.build_histogram(
+                event_id=event_id,
+                force=True,
+            ),
         )
 
         sys.modules['__main__'].on_atom_event = self.on_atom_event
@@ -41,15 +48,37 @@ class Plugin:
 
     def on_atom_event(self, event_type, event_code, event_pv):
 
+        event_id = str(time.perf_counter_ns())
+
         if event_code in [
-            # 68,  # CU_UPDATE_TA
-            69,  # CU_CURRENT_PROBE_CHANGED
-            # 72,  # CU_TABLE_SELCHANGED
-        ] and event_type == 'support':
+            28,  # CU_CURRENT_PEAK_CHANGED
+        ] and event_type == 'window':
             LOGGER.info(
-                'Atom event: type %s, code %s, pv %s', event_type, event_code, event_pv,
+                'On Atom event',
+                extra=dict(
+                    event_id=event_id,
+                    event_type=event_type,
+                    event_code=event_code,
+                    event_pv=event_pv,
+                ),
             )
-            self.window.on_refreshed()
+            self.window.on_refreshed(event_id=event_id)
+
+            return None
+
+        if event_code in [
+            69,  # CU_CURRENT_PROBE_CHANGED
+        ] and event_type == 'window':
+            LOGGER.info(
+                'On Atom event',
+                extra=dict(
+                    event_id=event_id,
+                    event_type=event_type,
+                    event_code=event_code,
+                    event_pv=event_pv,
+                ),
+            )
+            self.window.on_refreshed(event_id=event_id)
 
             return None
 
@@ -59,7 +88,13 @@ class Plugin:
             138,  # CU_IS_ABOUT_CLOSE_APP
         ]:
             LOGGER.info(
-                'Atom event: type %s, code %s, pv %s', event_type, event_code, event_pv,
+                'On Atom event',
+                extra=dict(
+                    event_id=event_id,
+                    event_type=event_type,
+                    event_code=event_code,
+                    event_pv=event_pv,
+                ),
             )
             self.window.close()
             self.app.quit()

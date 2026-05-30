@@ -22,7 +22,10 @@ def exception_wrapper(func):
             result = func(*args, **kwargs)
 
         except Exception as error:
-            LOGGER.warning('Plugin ware not refreshed successfully!', exc_info=True)
+            LOGGER.warning(
+                'Plugin ware not refreshed successfully!',
+                exc_info=True,
+            )
             raise get_initial_exception(error)
 
         else:

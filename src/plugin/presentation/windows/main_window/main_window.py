@@ -1,3 +1,4 @@
+import time
 from collections.abc import Mapping
 
 from PySide6 import QtCore, QtWidgets
@@ -54,12 +55,28 @@ class MainWindow(BaseMainWindow):
             y = available.y() + 20
             self.setGeometry(x, y, window_width, window_height)
 
-    def on_refreshed(self, *args, **kwargs) -> None:
-        histogram = self.state_manager.build_histogram()
-        self.refresh(histogram=histogram)
+    def on_refreshed(
+        self,
+        *args,
+        event_id: str | None = None,
+        **kwargs,
+    ) -> None:
+        event_id = event_id or str(time.perf_counter_ns())
+
+        histogram = self.state_manager.build_histogram(
+            event_id=event_id,
+        )
+        self.refresh(
+            event_id=event_id,
+            histogram=histogram,
+        )
 
     def refresh(
         self,
+        event_id: str,
         histogram: HistogramData,
     ) -> None:
-        self.centralWidget().diameter_widget.plot(histogram=histogram)
+        self.centralWidget().diameter_widget.plot(
+            event_id=event_id,
+            histogram=histogram,
+        )

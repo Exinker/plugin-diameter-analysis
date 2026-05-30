@@ -1,12 +1,15 @@
 import logging
+import logging.config
 import sys
 
-from plugin.plugin import Plugin
 from plugin.configs import DIAMETER_HISTOGRAM_CONFIG, PLUGIN_CONFIG
-from plugin.loggers import *
+from plugin.loggers import logger_config
+from plugin.plugin import Plugin
 from plugin.managers.data_source_manager import AtomDataSource, DataSourceManager
 from plugin.managers.diameter_manager import DiameterManager
 from plugin.managers.state_manager import StateManager
+
+logging.config.dictConfig(logger_config)
 
 LOGGER = logging.getLogger('plugin-diameter-analysis')
 

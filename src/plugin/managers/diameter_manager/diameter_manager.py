@@ -21,10 +21,19 @@ class DiameterManager:
         self.sample_mass = sample_mass
         self.bins = bins
 
-    def calculate(
+    def calculate_diameter(
         self,
+        event_id: str,
         channel: Channel,
     ) -> Array[MicroMeter]:
+
+        LOGGER.debug(
+            'Calculate diameter',
+            extra=dict(
+                event_id=event_id,
+                nickname=channel.nickname,
+            ),
+        )
 
         mass = self.sample_mass / channel.counts
 
@@ -40,8 +49,16 @@ class DiameterManager:
 
     def build_histogram(
         self,
+        event_id: str,
         diameter: Array[MicroMeter],
     ) -> HistogramData:
+
+        LOGGER.debug(
+            'Build histogram',
+            extra=dict(
+                event_id=event_id,
+            ),
+        )
 
         diameter = diameter[np.isfinite(diameter)]
         counts, edges = np.histogram(diameter, bins=self.bins)

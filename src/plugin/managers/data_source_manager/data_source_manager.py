@@ -15,37 +15,73 @@ class DataSourceManager:
 
         self.data_source = data_source
 
-    def get_probe_id(self) -> int:
-        return self.data_source.get_probe_id()
+    def get_probe_id(
+        self,
+        event_id: str,
+    ) -> int:
+        return self.data_source.get_probe_id(
+            event_id=event_id,
+        )
 
-    def get_column_id(self) -> int:
-        return self.data_source.get_column_id()
+    def get_column_id(
+        self,
+        event_id: str,
+    ) -> int:
+        return self.data_source.get_column_id(
+            event_id=event_id,
+        )
 
     def get_context(
         self,
+        event_id: str,
         probe_id: int,
         column_id: int,
     ) -> Context | None:
 
         try:
-            self.data_source.set_current_probe_id(probe_id)
+            self.data_source.set_current_probe_id(
+                event_id=event_id,
+                probe_id=probe_id,
+            )
         except Exception:
             LOGGER.warning(
-                'Failed to set current probe %s', probe_id,
+                'Failed to set current probe',
+                extra=dict(
+                    event_id=event_id,
+                    probe_id=probe_id,
+                    column_id=column_id,
+                ),
             )
             return None
 
-        meta = self.data_source.get_probe_meta(probe_id)
+        meta = self.data_source.get_probe_meta(
+            event_id=event_id,
+            probe_id=probe_id,
+        )
         if meta is None:
             LOGGER.warning(
-                'Failed to get meta for probe %s', probe_id,
+                'Failed to get meta',
+                extra=dict(
+                    event_id=event_id,
+                    probe_id=probe_id,
+                    column_id=column_id,
+                ),
             )
             return None
 
-        data = self.data_source.get_probe_data(probe_id, column_id)
+        data = self.data_source.get_probe_data(
+            event_id=event_id,
+            probe_id=probe_id,
+            column_id=column_id,
+        )
         if data is None:
             LOGGER.warning(
-                'Failed to get data for probe %s', probe_id,
+                'Failed to get data',
+                extra=dict(
+                    event_id=event_id,
+                    probe_id=probe_id,
+                    column_id=column_id,
+                ),
             )
             return None
 

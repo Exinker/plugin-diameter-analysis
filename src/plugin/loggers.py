@@ -1,52 +1,80 @@
+import json
 import logging
-import logging.config
+from datetime import datetime, timezone
 
-from plugin.configs import PLUGIN_CONFIG, ROOT
+from plugin.configs import LOGGING_CONFIG, ROOT
 
 
-def setdefault_logger():
-    config = dict(
-        version=1,
-        disable_existing_loggers=False,
+class JsonRecordFormatter(logging.Formatter):
 
-        formatters=dict(
-            formatter={
-                'datefmt': '%Y-%m-%d %H:%M:%S',
-                'format': '[%(asctime)s.%(msecs)04d] %(levelname)-8s - %(message)s',
-            },
-        ),
+    RECORD_KEYS = {
+        'args', 'created', 'exc_info', 'exc_text', 'filename', 'funcName',
+        'levelname', 'levelno', 'lineno', 'module', 'msecs', 'msg', 'name',
+        'pathname', 'relativeCreated', 'process', 'processName', 'stack_info',
+        'taskName', 'thread', 'threadName',
+    }
 
-        handlers=dict(
-            stream_handler={
-                'class': 'logging.StreamHandler',
-                'level': logging.DEBUG,
-                'formatter': 'formatter',
-            },
-            file_handler={
-                'class': 'logging.FileHandler',
-                'level': PLUGIN_CONFIG.logging_level.value,
-                'filename': str(ROOT / '.log'),
-                'mode': 'a',
-                'formatter': 'formatter',
-                'encoding': 'utf-8',
-            },
-        ),
+    def format(
+        self,
+        record: logging.LogRecord,
+    ) -> str:
 
-        loggers={
-            'plugin-diameter-analysis': {
-                'level': PLUGIN_CONFIG.logging_level.value,
-                'handlers': ['file_handler', 'stream_handler'],
-                'propagate': False,
-            },
-            'spectrumlab': {
-                'level': PLUGIN_CONFIG.logging_level.value,
-                'handlers': ['file_handler', 'stream_handler'],
-                'propagate': False,
-            },
+        data = dict(
+            timestamp=datetime.fromtimestamp(
+                timestamp=record.created,
+                tz=timezone.utc,
+            ).isoformat(),
+            level=record.levelname,
+            msg=record.getMessage(),
+        )
+        if record.exc_info:
+            data['error'] = self.formatException(record.exc_info)
+
+        extra = dict()
+        for key, value in record.__dict__.items():
+            if key not in self.RECORD_KEYS:
+                extra[key] = value
+
+        return json.dumps(dict(
+            **data,
+            **extra,
+        ), ensure_ascii=False, default=str)
+
+
+logger_config = {
+    'version': 1,
+    'disable_existing_loggers': False,
+
+    'formatters': {
+        'formatter': {
+            '()': JsonRecordFormatter,
         },
-    )
+    },
 
-    logging.config.dictConfig(config)
+    'handlers': {
+        'stream_handler': {
+            'class': 'logging.StreamHandler',
+            'level': LOGGING_CONFIG.level.value,
+            'filters': [],
+            'formatter': 'formatter',
+        },
+        'file_handler': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'level': LOGGING_CONFIG.level.value,
+            'filename': ROOT / '.log',
+            'mode': 'a',
+            'maxBytes': LOGGING_CONFIG.file_bytes,
+            'backupCount': LOGGING_CONFIG.file_backups,
+            'formatter': 'formatter',
+        },
+    },
 
+    'loggers': {
+        'plugin-diameter-analysis': {
+            'level': logging.DEBUG,
+            'handlers': ['stream_handler', 'file_handler'],
+            'propagate': True,
+        },
+    },
 
-setdefault_logger()
+}
