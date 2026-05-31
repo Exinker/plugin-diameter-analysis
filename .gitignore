@@ -17,6 +17,7 @@ spd/
 
 .coverage
 .log
+.log.*
 *.dat
 *.env
 *.in

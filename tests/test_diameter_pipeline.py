@@ -3,7 +3,6 @@ from dataclasses import FrozenInstanceError
 import numpy as np
 import pytest
 
-from plugin.context import Channel, Context
 from plugin.managers.data_source_manager import DataSourceManager
 from plugin.managers.data_source_manager.data_sources import AtomDataSource
 from plugin.managers.data_source_manager.data_sources.base_data_source import (
@@ -12,6 +11,7 @@ from plugin.managers.data_source_manager.data_sources.base_data_source import (
     AtomProbeMeta,
 )
 from plugin.managers.diameter_manager import DiameterManager
+from plugin.models import Channel, Context
 from tests.mock_atom import MockAtomAPI
 
 

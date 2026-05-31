@@ -2,9 +2,9 @@ import logging
 
 import numpy as np
 
-from plugin.context import Context, HistogramData
 from plugin.managers.data_source_manager import DataSourceManager
 from plugin.managers.diameter_manager import DiameterManager
+from plugin.models import Context, HistogramData
 
 
 LOGGER = logging.getLogger('plugin-diameter-analysis')

@@ -1,7 +1,7 @@
 import logging
 
-from plugin.context import Context
 from plugin.managers.data_source_manager.data_sources import DataSourceABC
+from plugin.models import Context
 
 LOGGER = logging.getLogger('plugin-diameter-analysis')
 

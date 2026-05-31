@@ -18,7 +18,7 @@ QtCore = pytest.importorskip('PySide6.QtCore')
 QtWidgets = pytest.importorskip('PySide6.QtWidgets')
 
 from plugin.configs import DIAMETER_HISTOGRAM_CONFIG, PLUGIN_CONFIG
-from plugin.context import HistogramData
+from plugin.models import HistogramData
 from plugin.managers.data_source_manager import DataSourceManager
 from plugin.managers.data_source_manager.data_sources import AtomDataSource
 from plugin.managers.diameter_manager import DiameterManager

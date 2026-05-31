@@ -3,8 +3,8 @@ from collections.abc import Sequence
 
 import numpy as np
 
-from plugin.context import Channel, HistogramData
 from plugin.elements import ELEMENT_DENSITY
+from plugin.models import Channel, HistogramData
 from spectrumlab.types import Array, MicroMeter
 
 LOGGER = logging.getLogger('plugin-diameter-analysis')

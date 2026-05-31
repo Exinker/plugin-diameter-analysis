@@ -5,7 +5,7 @@ from typing import Any, Self, TYPE_CHECKING
 
 import numpy as np
 
-from plugin.context.utils import (
+from plugin.models.utils import (
     calculate_concentration,
     find_bounds,
 )

@@ -1,6 +1,5 @@
 import logging
 import logging.config
-import sys
 
 from plugin.configs import DIAMETER_HISTOGRAM_CONFIG, PLUGIN_CONFIG
 from plugin.loggers import logger_config
@@ -12,13 +11,6 @@ from plugin.managers.state_manager import StateManager
 logging.config.dictConfig(logger_config)
 
 LOGGER = logging.getLogger('plugin-diameter-analysis')
-
-
-def register(
-    plugin: Plugin,
-) -> None:
-
-    sys.modules['__main__'].on_atom_event = plugin.on_atom_event
 
 
 def run(atom_api) -> None:

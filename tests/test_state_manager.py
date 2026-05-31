@@ -1,7 +1,7 @@
 import numpy as np
 
 from plugin.configs import PLUGIN_CONFIG
-from plugin.context import HistogramData
+from plugin.models import HistogramData
 from plugin.managers.data_source_manager import AtomDataSource, DataSourceManager
 from plugin.managers.diameter_manager import DiameterManager
 from plugin.managers.state_manager import StateManager

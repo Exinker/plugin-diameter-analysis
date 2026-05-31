@@ -5,7 +5,7 @@ import numpy as np
 from PySide6 import QtWidgets
 
 from plugin.configs import DiameterHistogramConfig, HistogramUnits
-from plugin.context import HistogramData
+from plugin.models import HistogramData
 from spectrumapp.widgets.graph_widget import BaseGraphWidget
 
 

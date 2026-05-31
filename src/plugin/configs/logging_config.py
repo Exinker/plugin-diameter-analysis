@@ -18,7 +18,7 @@ class LoggingLevel(Enum):
 class LoggingConfig(BaseSettings):
 
     level: LoggingLevel = Field(LoggingLevel.INFO, alias='LOGGING_LEVEL')
-    file_bytes: int = Field(1024 * 1024, alias='LOGGING_FILE_BYTES')
+    file_bytes: int = Field(1024 * 1024 * 100, alias='LOGGING_FILE_BYTES')  # 100 MB
     file_backups: int = Field(3, alias='LOGGING_FILE_COUNTS')
 
     model_config = SettingsConfigDict(

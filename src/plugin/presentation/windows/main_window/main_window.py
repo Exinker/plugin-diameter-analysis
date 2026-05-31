@@ -1,11 +1,9 @@
-import time
 from collections.abc import Mapping
 
 from PySide6 import QtCore, QtWidgets
 
 from plugin.configs import DIAMETER_HISTOGRAM_CONFIG
-from plugin.context import HistogramData
-from plugin.managers.state_manager import StateManager
+from plugin.models import HistogramData
 from plugin.presentation.windows.main_window.central_widget import CentralWidget
 from spectrumapp.windows.main_window import BaseMainWindow
 
@@ -14,11 +12,9 @@ class MainWindow(BaseMainWindow):
 
     def __init__(
         self,
-        state_manager: StateManager,
         flags: Mapping[QtCore.Qt.WindowType, bool] | None = None,
     ) -> None:
         super().__init__()
-        self.state_manager = state_manager
 
         # title
         self.setWindowTitle('Diameter Analysis')
@@ -55,27 +51,12 @@ class MainWindow(BaseMainWindow):
             y = available.y() + 20
             self.setGeometry(x, y, window_width, window_height)
 
-    def on_refreshed(
-        self,
-        *args,
-        event_id: str | None = None,
-        **kwargs,
-    ) -> None:
-        event_id = event_id or str(time.perf_counter_ns())
-
-        histogram = self.state_manager.build_histogram(
-            event_id=event_id,
-        )
-        self.refresh(
-            event_id=event_id,
-            histogram=histogram,
-        )
-
     def refresh(
         self,
         event_id: str,
         histogram: HistogramData,
     ) -> None:
+
         self.centralWidget().diameter_widget.plot(
             event_id=event_id,
             histogram=histogram,
